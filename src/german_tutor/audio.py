@@ -1,3 +1,10 @@
+"""
+Audio transcription via the OpenAI Whisper API.
+
+Exposes `transcribe_audio(audio_bytes) -> str`, which is transport-agnostic
+and reusable from both Streamlit and FastAPI.
+"""
+
 import io
 
 from openai import OpenAI

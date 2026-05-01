@@ -3,7 +3,10 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.german_tutor.schemas import QuestionBatch
-from src.german_tutor.tutor import generate_response, generate_structured_response
+from src.german_tutor.topic_discussion import (
+    generate_response,
+    generate_structured_response,
+)
 
 
 def make_llm(content):

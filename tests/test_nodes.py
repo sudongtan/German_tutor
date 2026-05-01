@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from src.german_tutor.schemas import FeedbackResult, QuestionBatch
-from src.german_tutor.tutor import (
+from src.german_tutor.topic_discussion import (
     State,
     generate_examples,
     generate_expressions,
@@ -25,7 +25,7 @@ class TestGenerateFeedback:
     def test_returns_corrected_answer(self):
         state = make_state(user_answer="Ich bin mude")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_feedback(corrected="Ich bin müde."),
         ):
             result = generate_feedback(state)
@@ -34,7 +34,7 @@ class TestGenerateFeedback:
     def test_returns_explanation(self):
         state = make_state(user_answer="Ich bin mude")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_feedback(explanation="Missing umlaut on 'müde'."),
         ):
             result = generate_feedback(state)
@@ -43,7 +43,7 @@ class TestGenerateFeedback:
     def test_returns_score(self):
         state = make_state(user_answer="Ich bin müde")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_feedback(score=9),
         ):
             result = generate_feedback(state)
@@ -52,7 +52,7 @@ class TestGenerateFeedback:
     def test_logs_answer(self):
         state = make_state(user_answer="Ich bin müde")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_feedback(),
         ):
             result = generate_feedback(state)
@@ -62,7 +62,8 @@ class TestGenerateFeedback:
         state = make_state(user_answer="Ich bin müde")
         fb = make_feedback(corrected="Ich bin müde.", explanation="Perfect.", score=10)
         with patch(
-            "src.german_tutor.tutor.generate_structured_response", return_value=fb
+            "src.german_tutor.topic_discussion.generate_structured_response",
+            return_value=fb,
         ):
             result = generate_feedback(state)
         assert result["feedbacks"] == [fb.model_dump()]
@@ -70,7 +71,7 @@ class TestGenerateFeedback:
     def test_resets_moved_to_next(self):
         state = make_state(user_answer="Ich bin müde")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_feedback(),
         ):
             result = generate_feedback(state)
@@ -85,7 +86,7 @@ class TestGenerateQuestion:
     def test_returns_question(self):
         state = make_state(user_topic="weather")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Wie ist das Wetter?"),
         ):
             result = generate_question(state)
@@ -94,7 +95,7 @@ class TestGenerateQuestion:
     def test_appends_to_asked_questions(self):
         state = make_state(user_topic="weather")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Wie ist das Wetter?"),
         ):
             result = generate_question(state)
@@ -103,7 +104,7 @@ class TestGenerateQuestion:
     def test_resets_hint(self):
         state = make_state(user_topic="weather", hint="some previous hint")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Wie ist das Wetter?"),
         ):
             result = generate_question(state)
@@ -112,7 +113,7 @@ class TestGenerateQuestion:
     def test_sets_moved_to_next(self):
         state = make_state(user_topic="weather")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Wie ist das Wetter?"),
         ):
             result = generate_question(state)
@@ -125,7 +126,7 @@ class TestGenerateQuestion:
             asked_questions=["Wie ist das Wetter?"],
         )
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Ist es kalt?"),
         ) as mock:
             generate_question(state)
@@ -135,7 +136,7 @@ class TestGenerateQuestion:
     def test_no_avoid_in_prompt_on_first_question(self):
         state = make_state(user_topic="weather", user_level="B1")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Wie ist das Wetter?"),
         ) as mock:
             generate_question(state)
@@ -145,7 +146,7 @@ class TestGenerateQuestion:
     def test_includes_level_in_prompt(self):
         state = make_state(user_topic="weather", user_level="C1")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Wie ist das Wetter?"),
         ) as mock:
             generate_question(state)
@@ -154,7 +155,9 @@ class TestGenerateQuestion:
 
     def test_pops_from_pool_without_llm_call(self):
         state = make_state(user_topic="weather", question_pool=["Frage 1", "Frage 2"])
-        with patch("src.german_tutor.tutor.generate_structured_response") as mock:
+        with patch(
+            "src.german_tutor.topic_discussion.generate_structured_response"
+        ) as mock:
             result = generate_question(state)
         mock.assert_not_called()
         assert result["ai_question"] == "Frage 1"
@@ -167,7 +170,7 @@ class TestGenerateQuestion:
     def test_generates_batch_when_pool_empty(self):
         state = make_state(user_topic="weather")
         with patch(
-            "src.german_tutor.tutor.generate_structured_response",
+            "src.german_tutor.topic_discussion.generate_structured_response",
             return_value=make_batch("Frage 1", "Frage 2", "Frage 3"),
         ) as mock:
             result = generate_question(state)
@@ -180,7 +183,8 @@ class TestGenerateExamples:
     def test_returns_hint(self):
         state = make_state(ai_question="Wie ist das Wetter?", user_level="B1")
         with patch(
-            "src.german_tutor.tutor.generate_response", return_value="Es ist sonnig."
+            "src.german_tutor.topic_discussion.generate_response",
+            return_value="Es ist sonnig.",
         ):
             result = generate_examples(state)
         assert result["hint"] == "Es ist sonnig."
@@ -188,7 +192,8 @@ class TestGenerateExamples:
     def test_includes_question_in_prompt(self):
         state = make_state(ai_question="Wie ist das Wetter?", user_level="B1")
         with patch(
-            "src.german_tutor.tutor.generate_response", return_value="Es ist sonnig."
+            "src.german_tutor.topic_discussion.generate_response",
+            return_value="Es ist sonnig.",
         ) as mock:
             generate_examples(state)
         prompt = mock.call_args[0][0][0]["content"]
@@ -197,7 +202,8 @@ class TestGenerateExamples:
     def test_includes_level_in_prompt(self):
         state = make_state(ai_question="Wie ist das Wetter?", user_level="A2")
         with patch(
-            "src.german_tutor.tutor.generate_response", return_value="Es ist sonnig."
+            "src.german_tutor.topic_discussion.generate_response",
+            return_value="Es ist sonnig.",
         ) as mock:
             generate_examples(state)
         prompt = mock.call_args[0][0][0]["content"]
@@ -208,7 +214,8 @@ class TestGenerateExpressions:
     def test_returns_hint(self):
         state = make_state(ai_question="Wie ist das Wetter?", user_level="B1")
         with patch(
-            "src.german_tutor.tutor.generate_response", return_value="Das Wetter ist..."
+            "src.german_tutor.topic_discussion.generate_response",
+            return_value="Das Wetter ist...",
         ):
             result = generate_expressions(state)
         assert result["hint"] == "Das Wetter ist..."
@@ -216,7 +223,7 @@ class TestGenerateExpressions:
     def test_includes_question_in_prompt(self):
         state = make_state(ai_question="Wie ist das Wetter?", user_level="B1")
         with patch(
-            "src.german_tutor.tutor.generate_response",
+            "src.german_tutor.topic_discussion.generate_response",
             return_value="Das Wetter ist...",
         ) as mock:
             generate_expressions(state)
@@ -226,7 +233,7 @@ class TestGenerateExpressions:
     def test_includes_level_in_prompt(self):
         state = make_state(ai_question="Wie ist das Wetter?", user_level="C1")
         with patch(
-            "src.german_tutor.tutor.generate_response",
+            "src.german_tutor.topic_discussion.generate_response",
             return_value="Das Wetter ist...",
         ) as mock:
             generate_expressions(state)

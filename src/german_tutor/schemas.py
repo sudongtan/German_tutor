@@ -1,3 +1,10 @@
+"""
+Pydantic models for input validation and LLM structured output.
+
+User input: UserTopic, UserAnswer, UserLevel — validated at the UI boundary.
+LLM output: QuestionBatch, FeedbackResult — used with with_structured_output().
+"""
+
 from pydantic import BaseModel, Field, field_validator
 
 VALID_LEVELS = {"A2", "B1", "B2", "C1"}

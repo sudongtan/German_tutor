@@ -1,3 +1,11 @@
+"""
+Application settings loaded from environment variables and .env.
+
+Exports `settings` (typed config object) and `LLM` (shared ChatOpenAI instance).
+LangSmith tracing is activated automatically when LANGCHAIN_TRACING_V2=true
+and LANGCHAIN_API_KEY are set.
+"""
+
 import os
 
 from langchain_openai import ChatOpenAI

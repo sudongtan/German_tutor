@@ -1,3 +1,11 @@
+"""
+LangGraph graph for topic-based German Q&A sessions.
+
+First invocation: invoke({"user_topic": str, "user_level": str}, config).
+Subsequent turns: invoke(Command(resume=user_answer), config).
+Exposes `app` (compiled graph) and `State` for external use.
+"""
+
 import logging
 import operator
 import sqlite3

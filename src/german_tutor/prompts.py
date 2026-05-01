@@ -1,3 +1,10 @@
+"""
+Prompt templates for all LLM calls in the application.
+
+All templates use str.format() placeholders. Required keys are documented
+inline with each constant.
+"""
+
 GENERATE_QUESTIONS_BATCH = (
     "Generate exactly 10 questions about {topic} in German at {level} level.{avoid}"
 )

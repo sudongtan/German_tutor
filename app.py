@@ -1,3 +1,11 @@
+"""
+Streamlit UI for the German Tutor.
+
+Session flow: topic → level → answer loop → done.
+Each step is driven by st.session_state.step and communicates with the
+topic_discussion graph via app.invoke() and Command(resume=...).
+"""
+
 import uuid
 
 import streamlit as st
@@ -6,7 +14,7 @@ from pydantic import ValidationError
 
 from src.german_tutor.audio import transcribe_audio
 from src.german_tutor.schemas import UserAnswer, UserTopic
-from src.german_tutor.tutor import app
+from src.german_tutor.topic_discussion import app
 
 st.title("German Tutor")
 
