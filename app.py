@@ -14,7 +14,9 @@ if "messages" not in st.session_state:
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
 if "step" not in st.session_state:
-    st.session_state.step = "topic"  # "topic" | "answer" | "done"
+    st.session_state.step = "topic"  # "topic" | "level" | "answer" | "done"
+if "pending_topic" not in st.session_state:
+    st.session_state.pending_topic = ""
 
 config = {"configurable": {"thread_id": st.session_state.thread_id}}
 
@@ -30,18 +32,46 @@ if st.session_state.step == "topic":
             st.error(e.errors()[0]["msg"])
             st.stop()
         st.session_state.messages.append({"role": "user", "content": validated.topic})
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": "What level would you like to practice at?",
+            }
+        )
+        st.session_state.pending_topic = validated.topic
+        st.session_state.step = "level"
+        st.rerun()
+
+elif st.session_state.step == "level":
+    cols = st.columns(4)
+    selected_level = None
+    for level, col in zip(["A2", "B1", "B2", "C1"], cols):
+        if col.button(level, use_container_width=True):
+            selected_level = level
+
+    if selected_level:
+        st.session_state.messages.append({"role": "user", "content": selected_level})
         try:
-            result = app.invoke({"user_topic": validated.topic}, config)
+            result = app.invoke(
+                {
+                    "user_topic": st.session_state.pending_topic,
+                    "user_level": selected_level,
+                },
+                config,
+            )
         except RuntimeError as e:
             st.error(f"Something went wrong: {e}")
             st.stop()
-        question = result["ai_question"]
-        st.session_state.messages.append({"role": "assistant", "content": question})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": result["ai_question"]}
+        )
         st.session_state.step = "answer"
         st.rerun()
 
 elif st.session_state.step == "answer":
-    placeholder = 'Answer in German, or type "stop" to finish'
+    placeholder = (
+        'Answer | "1" examples | "2" expressions | "next" next question | "stop" finish'
+    )
     user_input = st.chat_input(placeholder)
     if user_input:
         try:
@@ -60,12 +90,22 @@ elif st.session_state.step == "answer":
 
         if graph_done:
             st.session_state.step = "done"
-        else:
-            feedback = result["ai_feedback"]
-            new_question = result["ai_question"]
-            st.session_state.messages.append({"role": "assistant", "content": feedback})
+        elif result["hint"]:
             st.session_state.messages.append(
-                {"role": "assistant", "content": new_question}
+                {"role": "assistant", "content": result["hint"]}
+            )
+        elif result["moved_to_next"]:
+            st.session_state.messages.append(
+                {"role": "assistant", "content": result["ai_question"]}
+            )
+        else:
+            feedback_text = (
+                f"**Score: {result['feedback_score']}/10**\n\n"
+                f"**Correction:** {result['feedback_corrected_answer']}\n\n"
+                f"**Explanation:** {result['feedback_explanation']}"
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": feedback_text}
             )
 
         st.rerun()

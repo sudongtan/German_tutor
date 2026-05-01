@@ -1,17 +1,30 @@
-from src.german_tutor.prompts import AVOID_REPEAT, GENERATE_FEEDBACK, GENERATE_QUESTION
+from src.german_tutor.prompts import (
+    AVOID_REPEAT,
+    GENERATE_FEEDBACK,
+    GENERATE_QUESTIONS_BATCH,
+)
 
 
-def test_generate_question_has_topic_placeholder():
-    assert "{topic}" in GENERATE_QUESTION
+def test_generate_questions_batch_has_topic_placeholder():
+    assert "{topic}" in GENERATE_QUESTIONS_BATCH
 
 
-def test_generate_question_has_avoid_placeholder():
-    assert "{avoid}" in GENERATE_QUESTION
+def test_generate_questions_batch_has_level_placeholder():
+    assert "{level}" in GENERATE_QUESTIONS_BATCH
 
 
-def test_generate_question_formats_correctly():
-    result = GENERATE_QUESTION.format(topic="weather", avoid="")
+def test_generate_questions_batch_has_avoid_placeholder():
+    assert "{avoid}" in GENERATE_QUESTIONS_BATCH
+
+
+def test_generate_questions_batch_formats_correctly():
+    result = GENERATE_QUESTIONS_BATCH.format(topic="weather", level="B1", avoid="")
     assert "weather" in result
+    assert "B1" in result
+
+
+def test_generate_feedback_has_level_placeholder():
+    assert "{level}" in GENERATE_FEEDBACK
 
 
 def test_avoid_repeat_has_previous_placeholder():

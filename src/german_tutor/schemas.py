@@ -1,5 +1,29 @@
 from pydantic import BaseModel, Field, field_validator
 
+VALID_LEVELS = {"A2", "B1", "B2", "C1"}
+
+
+class UserLevel(BaseModel):
+    level: str
+
+    @field_validator("level")
+    @classmethod
+    def must_be_valid(cls, v: str) -> str:
+        v = v.strip().upper()
+        if v not in VALID_LEVELS:
+            raise ValueError("Level must be one of: A2, B1, B2, C1")
+        return v
+
+
+class QuestionBatch(BaseModel):
+    questions: list[str]
+
+
+class FeedbackResult(BaseModel):
+    corrected_answer: str
+    explanation: str
+    score: int = Field(ge=1, le=10)
+
 
 class UserTopic(BaseModel):
     topic: str = Field(min_length=1, max_length=100)

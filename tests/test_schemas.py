@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.german_tutor.schemas import UserAnswer, UserTopic
+from src.german_tutor.schemas import UserAnswer, UserLevel, UserTopic
 
 
 class TestUserTopic:
@@ -36,6 +36,30 @@ class TestUserTopic:
     def test_max_length_accepted(self):
         t = UserTopic(topic="a" * 100)
         assert len(t.topic) == 100
+
+
+class TestUserLevel:
+    def test_valid_levels(self):
+        for level in ["A2", "B1", "B2", "C1"]:
+            assert UserLevel(level=level).level == level
+
+    def test_normalises_to_uppercase(self):
+        assert UserLevel(level="b1").level == "B1"
+
+    def test_strips_whitespace(self):
+        assert UserLevel(level="  B2  ").level == "B2"
+
+    def test_invalid_level_rejected(self):
+        with pytest.raises(ValidationError, match="must be one of"):
+            UserLevel(level="A1")
+
+    def test_empty_rejected(self):
+        with pytest.raises(ValidationError):
+            UserLevel(level="")
+
+    def test_c2_rejected(self):
+        with pytest.raises(ValidationError):
+            UserLevel(level="C2")
 
 
 class TestUserAnswer:
