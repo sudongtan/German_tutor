@@ -13,7 +13,10 @@ def make_llm(content):
 
 def test_returns_content(caplog):
     llm = make_llm("Wie heißt du?")
-    assert generate_response([{"role": "user", "content": "hi"}], llm=llm) == "Wie heißt du?"
+    assert (
+        generate_response([{"role": "user", "content": "hi"}], llm=llm)
+        == "Wie heißt du?"
+    )
 
 
 def test_empty_response_returns_fallback(caplog):
@@ -30,6 +33,7 @@ def test_whitespace_response_returns_fallback():
 
 def test_empty_response_logs_warning(caplog):
     import logging
+
     llm = make_llm("")
     with caplog.at_level(logging.WARNING, logger="src.german_tutor.tutor"):
         generate_response([{"role": "user", "content": "hi"}], llm=llm)

@@ -44,7 +44,8 @@ class State(BaseModel):
 def generate_question(state: State):
     avoid = (
         AVOID_REPEAT.format(previous=state.asked_questions)
-        if state.asked_questions else ""
+        if state.asked_questions
+        else ""
     )
     content = GENERATE_QUESTION.format(topic=state.user_topic, avoid=avoid)
     question = generate_response([{"role": "system", "content": content}])
@@ -63,10 +64,12 @@ def should_stop(state: State):
 
 
 def generate_feedback(state: State):
-    feedback = generate_response([
-        {"role": "system", "content": GENERATE_FEEDBACK},
-        {"role": "user", "content": state.user_answer},
-    ])
+    feedback = generate_response(
+        [
+            {"role": "system", "content": GENERATE_FEEDBACK},
+            {"role": "user", "content": state.user_answer},
+        ]
+    )
     return {
         "ai_feedback": feedback,
         "answers": [state.user_answer],

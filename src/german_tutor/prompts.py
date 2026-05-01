@@ -1,7 +1,4 @@
-GENERATE_QUESTION = (
-    "Generate a question about {topic} in German."
-    "{avoid}"
-)
+GENERATE_QUESTION = "Generate a question about {topic} in German.{avoid}"
 
 AVOID_REPEAT = " Do not ask any of these questions again: {previous}"
 

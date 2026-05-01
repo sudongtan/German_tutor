@@ -64,7 +64,9 @@ elif st.session_state.step == "answer":
             feedback = result["ai_feedback"]
             new_question = result["ai_question"]
             st.session_state.messages.append({"role": "assistant", "content": feedback})
-            st.session_state.messages.append({"role": "assistant", "content": new_question})
+            st.session_state.messages.append(
+                {"role": "assistant", "content": new_question}
+            )
 
         st.rerun()
 
