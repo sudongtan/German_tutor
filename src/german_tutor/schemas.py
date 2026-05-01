@@ -46,6 +46,23 @@ class UserTopic(BaseModel):
         return v
 
 
+class GermanEquivalents(BaseModel):
+    words: list[str]
+
+
+class WordNuance(BaseModel):
+    word: str
+    frequency: str
+    synonyms: list[str]
+    nuance: str
+    formality: str
+
+
+class NuanceComparison(BaseModel):
+    summary: str
+    words: list[WordNuance]
+
+
 class UserAnswer(BaseModel):
     answer: str = Field(min_length=1, max_length=500)
 
