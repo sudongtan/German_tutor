@@ -1,14 +1,15 @@
 import logging
 import operator
+import sqlite3
 from typing import Annotated
 
 from langchain_core.language_models import BaseChatModel
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
-from src.german_tutor.config import LLM
+from src.german_tutor.config import LLM, settings
 from src.german_tutor.prompts import (
     AVOID_REPEAT,
     GENERATE_EXAMPLES,
@@ -184,4 +185,5 @@ graph.add_edge("generate_examples", "ask_for_answer")
 graph.add_edge("generate_expressions", "ask_for_answer")
 graph.add_edge("generate_feedback", "ask_for_answer")
 
-app = graph.compile(checkpointer=MemorySaver())
+_conn = sqlite3.connect(settings.checkpoint_db, check_same_thread=False)
+app = graph.compile(checkpointer=SqliteSaver(_conn))
