@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     openai_api_key: str = Field(min_length=1)
     llm_model: str = "gpt-4o-mini"
+    whisper_model: str = "whisper-1"
     langchain_tracing_v2: bool = False
     langchain_api_key: str = ""
     langchain_project: str = "german-tutor"

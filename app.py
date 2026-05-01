@@ -4,6 +4,7 @@ import streamlit as st
 from langgraph.types import Command
 from pydantic import ValidationError
 
+from src.german_tutor.audio import transcribe_audio
 from src.german_tutor.schemas import UserAnswer, UserTopic
 from src.german_tutor.tutor import app
 
@@ -17,6 +18,8 @@ if "step" not in st.session_state:
     st.session_state.step = "topic"  # "topic" | "level" | "answer" | "done"
 if "pending_topic" not in st.session_state:
     st.session_state.pending_topic = ""
+if "audio_key" not in st.session_state:
+    st.session_state.audio_key = 0
 
 config = {"configurable": {"thread_id": st.session_state.thread_id}}
 
@@ -69,13 +72,26 @@ elif st.session_state.step == "level":
         st.rerun()
 
 elif st.session_state.step == "answer":
-    placeholder = (
-        'Answer | "1" examples | "2" expressions | "next" next question | "stop" finish'
+    audio = st.audio_input(
+        "Record your answer in German", key=f"audio_{st.session_state.audio_key}"
     )
+    placeholder = 'Type answer | "1" examples | "2" expressions | "next" | "stop"'
     user_input = st.chat_input(placeholder)
-    if user_input:
+
+    answer_text = None
+    if audio:
         try:
-            validated = UserAnswer(answer=user_input)
+            answer_text = transcribe_audio(audio.getvalue())
+        except RuntimeError as e:
+            st.error(f"Transcription failed: {e}")
+            st.stop()
+        st.session_state.audio_key += 1
+    elif user_input:
+        answer_text = user_input
+
+    if answer_text:
+        try:
+            validated = UserAnswer(answer=answer_text)
         except ValidationError as e:
             st.error(e.errors()[0]["msg"])
             st.stop()
