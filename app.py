@@ -2,8 +2,9 @@
 Streamlit UI for the German Tutor.
 
 Session flow:
-  mode → topic discussion: topic → level → answer loop → done
-  mode → nuance comparison: english_input → nuance_answer loop → done
+  mode → topic discussion:   topic → level → answer loop → done
+  mode → nuance comparison:  english_input → nuance_answer loop → done
+  mode → article rag:        rag_question → rag_answer loop → done
 Each step is driven by st.session_state.step and communicates with the
 respective LangGraph app via invoke() and Command(resume=...).
 """
@@ -14,10 +15,13 @@ import streamlit as st
 from langgraph.types import Command
 from pydantic import ValidationError
 
+from src.german_tutor.article_rag import rag_app
 from src.german_tutor.audio import transcribe_audio
 from src.german_tutor.nuance_comparison import nuance_app
 from src.german_tutor.schemas import UserAnswer, UserTopic
+from src.german_tutor.stores import store as _vector_store
 from src.german_tutor.topic_discussion import app as topic_app
+from src.german_tutor.weaviate_client import fetch_url
 
 st.title("German Tutor")
 
@@ -33,6 +37,8 @@ if "audio_key" not in st.session_state:
     st.session_state.audio_key = 0
 if "nuance_session" not in st.session_state:
     st.session_state.nuance_session = 0
+if "rag_session" not in st.session_state:
+    st.session_state.rag_session = 0
 
 topic_config = {"configurable": {"thread_id": f"topic_{st.session_state.thread_id}"}}
 nuance_config = {
@@ -40,19 +46,54 @@ nuance_config = {
         "thread_id": f"nuance_{st.session_state.thread_id}_{st.session_state.nuance_session}"
     }
 }
+rag_config = {
+    "configurable": {
+        "thread_id": f"rag_{st.session_state.thread_id}_{st.session_state.rag_session}"
+    }
+}
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
+
+# ── Shared: article indexing expander (shown during RAG steps) ──────────────
+def _render_index_expander():
+    with st.expander("Index an article"):
+        input_type = st.radio("Input", ["URL", "Plain text"], horizontal=True)
+        if input_type == "URL":
+            url = st.text_input("Article URL")
+            if st.button("Fetch & Index"):
+                if url:
+                    try:
+                        title, text = fetch_url(url)
+                        n = _vector_store.index(text, source=url, title=title)
+                        st.success(f"Indexed {n} chunks from: {title}")
+                    except RuntimeError as e:
+                        st.error(str(e))
+        else:
+            text = st.text_area("Paste article text")
+            title = st.text_input("Title (optional)")
+            if st.button("Index"):
+                if text:
+                    try:
+                        n = _vector_store.index(text, source="manual", title=title)
+                        st.success(f"Indexed {n} chunks.")
+                    except RuntimeError as e:
+                        st.error(str(e))
+
+
 # ── Mode selection ──────────────────────────────────────────────────────────
 if st.session_state.step == "mode":
     st.write("What would you like to do?")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     if col1.button("Topic Discussion", use_container_width=True):
         st.session_state.step = "topic"
         st.rerun()
     if col2.button("Nuance Comparison", use_container_width=True):
         st.session_state.step = "english_input"
+        st.rerun()
+    if col3.button("Article RAG", use_container_width=True):
+        st.session_state.step = "rag_question"
         st.rerun()
 
 # ── Topic Discussion ────────────────────────────────────────────────────────
@@ -176,7 +217,6 @@ elif st.session_state.step == "english_input":
         except RuntimeError as e:
             st.error(f"Something went wrong: {e}")
             st.stop()
-        # Replace the "looking up..." placeholder with the actual comparison
         st.session_state.messages[-1] = {
             "role": "assistant",
             "content": result["comparison"],
@@ -210,10 +250,63 @@ elif st.session_state.step == "nuance_answer":
             st.session_state.step = "done"
         else:
             st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": result["follow_up_answers"][-1],
-                }
+                {"role": "assistant", "content": result["follow_up_answers"][-1]}
+            )
+
+        st.rerun()
+
+# ── Article RAG ─────────────────────────────────────────────────────────────
+elif st.session_state.step == "rag_question":
+    _render_index_expander()
+    user_input = st.chat_input("Ask a question about German usage from your articles:")
+    if user_input:
+        try:
+            validated = UserAnswer(answer=user_input)
+        except ValidationError as e:
+            st.error(e.errors()[0]["msg"])
+            st.stop()
+        st.session_state.messages.append({"role": "user", "content": validated.answer})
+        try:
+            result = rag_app.invoke({"user_question": validated.answer}, rag_config)
+        except RuntimeError as e:
+            st.error(f"Something went wrong: {e}")
+            st.stop()
+        st.session_state.messages.append(
+            {"role": "assistant", "content": result["answer"]}
+        )
+        st.session_state.step = "rag_answer"
+        st.rerun()
+
+elif st.session_state.step == "rag_answer":
+    _render_index_expander()
+
+    col1, col2 = st.columns([1, 5])
+    if col1.button("New question"):
+        st.session_state.rag_session += 1
+        st.session_state.step = "rag_question"
+        st.rerun()
+
+    user_input = st.chat_input('Ask a follow-up, or type "stop" to finish:')
+    if user_input:
+        try:
+            validated = UserAnswer(answer=user_input)
+        except ValidationError as e:
+            st.error(e.errors()[0]["msg"])
+            st.stop()
+        st.session_state.messages.append({"role": "user", "content": validated.answer})
+        try:
+            result = rag_app.invoke(Command(resume=validated.answer), rag_config)
+        except RuntimeError as e:
+            st.error(f"Something went wrong: {e}")
+            st.stop()
+
+        graph_done = len(rag_app.get_state(rag_config).next) == 0
+
+        if graph_done:
+            st.session_state.step = "done"
+        else:
+            st.session_state.messages.append(
+                {"role": "assistant", "content": result["follow_up_answers"][-1]}
             )
 
         st.rerun()

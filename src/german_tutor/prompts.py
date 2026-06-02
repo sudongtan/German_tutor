@@ -50,6 +50,21 @@ STRUCTURE_COMPARISON = (
     "level (colloquial, neutral, formal, or elevated).\n\n{comparison}"
 )
 
+RAG_ANSWER = (
+    "You are a German language tutor. Based on the following excerpts from German articles, "
+    "answer the user's question about German language usage. "
+    "Quote relevant German sentences where helpful and explain their meaning.\n\n"
+    "Excerpts:\n{chunks}\n\n"
+    "Question: {question}"
+)
+
+RAG_FOLLOW_UP = (
+    "You are a German language tutor helping a student learn from German articles. "
+    "Based on these article excerpts:\n{chunks}\n\n"
+    "Your initial answer was:\n{answer}\n\n"
+    "Answer follow-up questions using the excerpts and the previous discussion."
+)
+
 GENERATE_FOLLOW_UP_ANSWER = (
     "You are a German language expert. The user is asking follow-up questions about "
     'the nuances between these German equivalents of "{english}": {equivalents}. '

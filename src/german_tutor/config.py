@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     langchain_api_key: str = ""
     langchain_project: str = "german-tutor"
     langchain_endpoint: str = "https://api.smith.langchain.com"
+    weaviate_host: str = "localhost"
+    weaviate_port: int = 8080
 
 
 settings = Settings()
